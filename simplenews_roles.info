@@ -3,4 +3,4 @@ name = Simplenews Roles
 description = "Automatically subscribe users in designated roles to a newsletter list."
 package = Mail
 dependencies = simplenews
-version = "$Name$"
+
