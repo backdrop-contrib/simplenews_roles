@@ -1,6 +1,6 @@
 ; $Id$
-name = Simplenews Roles
+name = simplenews_roles
 description = "Automatically subscribe users in designated roles to a newsletter list."
 package = Mail
-dependencies = simplenews
-
+dependencies[] = simplenews
+core = 6.x
