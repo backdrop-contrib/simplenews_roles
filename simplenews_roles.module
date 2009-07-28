@@ -24,13 +24,18 @@ function simplenews_roles_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'simplenews_admin_types_form' && !empty($form['tid']['#value'])) {
     $form['#submit'][] = 'simplenews_roles_newsletter_submit';
     $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
-    
-    $form['roles'] = array(
+
+    $form['simplenews_roles'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Role synchronization'),
+      '#collapsible' => FALSE,
+      '#description' => t('This newsletter subscription list will consist of only users in the selected roles. This newsletter subscription is automatically syncronized so any users manually added to this list will be removed if they are not in any of the selected roles.'),
+    );
+    $form['simplenews_roles']['roles'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Automatically subscribe users in the following roles to this newsletter'),
       '#options' => user_roles(TRUE),
       '#default_value' => isset($role_newsletters[$form['tid']['#value']]) ? $role_newsletters[$form['tid']['#value']] : array(),
-      '#description' => t('This newsletter subscription list will consist of only users in the selected roles. This newsletter subscription is automatically syncronized so any users manually added to this list will be removed if they are not in any of the selected roles.'),
       '#weight' => 10,
     );
   }
