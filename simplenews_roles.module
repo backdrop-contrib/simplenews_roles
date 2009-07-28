@@ -2,6 +2,16 @@
 // $Id$
 
 /**
+ * Implementation of hook_help().
+ */
+function simplenews_roles_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#simplenews_roles':
+      return t('Simplenews roles keeps subscriptions to particular newsletters synchronized with one or more roles. Enable roles in the options for <a href="@newsletters">each newsletter</a>.', array('@newsletters' => url('admin/content/simplenews/types')));
+  }
+}
+
+/**
  * Implementation of hook_init().
  */
 function simplenews_roles_init() {
