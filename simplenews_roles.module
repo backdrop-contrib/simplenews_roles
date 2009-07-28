@@ -18,10 +18,12 @@ function simplenews_roles_cron() {
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Add our settings to the newsletter settings page.
  */
-function simplenews_roles_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'simplenews_admin_types_form' && !empty($form['tid']['#value'])) {
+function simplenews_roles_form_simplenews_admin_types_form_alter(&$form, $form_state) {
+  if (!empty($form['tid']['#value'])) {
     $form['#submit'][] = 'simplenews_roles_newsletter_submit';
     $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
 
