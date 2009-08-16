@@ -1,0 +1,47 @@
+<?php
+// $Id$
+
+/**
+* Unit tests for Simplenews Roles module.
+*/
+class SimplenewsRolesTestCase extends SimplenewsTestCase {
+  protected $web_user;
+  protected $image;
+  protected $another_image;
+
+  /**
+   * Drupal SimpleTest method: return metadata about the test.
+   */
+  function getInfo() {
+    return array(
+      'name'  => t('Simplenews Roles'),
+      'description'  => t('Executes test suite for Simplenews Roles module.'),
+      'group' => t('Simplenews'),
+    );
+  }
+
+  /**
+   * Test role synchronization.
+   */
+  function testRoleSync() {
+    $user = $this->drupalCreateUser($permissions = NULL);
+    
+    // We want the role that's just been created for this user by drupalCreateUser
+    // It's almost certainly role 3.
+    // To be sure we should say array_shift($roles) but STUPID POS PHP resets
+    // numerical keys after an array_shift, WTF.
+    // This should be safe though. Thanks catch!
+    $rid = max(array_keys($user->roles));
+    $rids = array($rid);
+    
+    // Get a newsletter.
+    $tid = $this->getRandomNewsletter();
+    
+    // synchronize the role and the newsletter.
+    simplenews_roles_update_subscriptions($tid, $rids);
+    $this->assertTrue(
+      simplenews_user_is_subscribed($user->mail, $tid, TRUE),
+      t('User with role was automatically subscribed.')
+    );
+  }
+}
