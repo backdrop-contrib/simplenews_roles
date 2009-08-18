@@ -122,13 +122,6 @@ function simplenews_roles_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
- * Implementation of hook_theme().
- */
-function simplenews_roles_theme() {
-	return array('simplenews_roles_newsletter_footer' => array('arguments' => array('format' => NULL, 'hash' => NULL, 'test' => NULL, 'langcode' => NULL)));
-}
-
-/**
  * Implementation of hook_mail_alter().
  * It is pointless to have an unsubscribe link for role-based emails.
  */
