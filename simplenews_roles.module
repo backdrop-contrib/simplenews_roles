@@ -214,6 +214,11 @@ function simplenews_roles_update_subscriptions($tid, $rids) {
   /** 
    * step 0:
    * remove anon users
+   *
+   * skip this step: it breaks simpletest.
+   * (cookie if you can tell me why!)
+   * and if you intend to have a synced newsletter you really should keep
+   * anon users out of it.
    */
   $query_0 = "
     DELETE {simplenews_snid_tid}
@@ -223,7 +228,7 @@ function simplenews_roles_update_subscriptions($tid, $rids) {
       {simplenews_subscriptions} sns
       ON snst.snid = sns.snid
     WHERE
-      snst.tid = %d # TODO: tid
+      snst.tid = %d /* $tid */
     AND
       sns.uid = 0";
   
