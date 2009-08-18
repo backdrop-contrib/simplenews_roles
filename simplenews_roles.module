@@ -2,6 +2,18 @@
 // $Id$
 
 /**
+ * @file
+ * Simplenews Roles module
+ *
+ * Keeps a mailing list subscription in sync with a role.
+ * Needs to sync on:
+ * - user role change (but just that user)
+ * - newsletter role change (whole newsletter)
+ * - 
+ */
+ 
+ 
+/**
  * Implementation of hook_help().
  */
 function simplenews_roles_help($path, $arg) {
@@ -22,8 +34,11 @@ function simplenews_roles_init() {
  * Implementation of hook_cron().
  */
 function simplenews_roles_cron() {
-  foreach(variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
-    simplenews_roles_update_subscriptions($tid, $rids);
+  // Only sync if it's been requested.
+  if (variable_get('simplenews_roles_need_sync', FALSE)) {
+    foreach(variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
+      simplenews_roles_update_subscriptions($tid, $rids);
+    }
   }
 }
 
@@ -71,7 +86,10 @@ function simplenews_roles_newsletter_submit($form, &$form_state) {
   
   if (count($roleids) > 0) {
     $role_newsletters[$tid] = $roleids;
-    simplenews_roles_update_subscriptions($tid, $roleids);
+    // Newsletter has roles: request a sync.
+    // TODO: sync just this NL.
+    variable_set('simplenews_roles_need_sync', TRUE);
+
   }
   elseif (isset($role_newsletters[$tid])) {
     unset($role_newsletters[$tid]);
@@ -94,7 +112,9 @@ function simplenews_roles_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
         $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
         if (isset($role_newsletters[$tid])) {
-          simplenews_roles_update_subscriptions($tid, $role_newsletters[$tid]);
+          //simplenews_roles_update_subscriptions($tid, $role_newsletters[$tid]);
+          // TODO
+          // Why do we need to sync here?
         }
         break;
     }
@@ -138,12 +158,17 @@ function simplenews_roles_user($op, &$edit, &$account, $category = NULL) {
       $roles = array_unique(array_merge($newroles, $oldroles, array(DRUPAL_AUTHENTICATED_RID)));
      
       foreach(variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
-      	if (count(array_intersect($rids, $roles)) > 0)
+      	if (count(array_intersect($rids, $roles)) > 0) {
           // if there are "new" roles for the user for this newsletter, then sync the user
-          simplenews_roles_update_subscriptions($tid, $rids);
-        else
+          //simplenews_roles_update_subscriptions($tid, $rids);
+          // TODO: sync func for one user.
+          // Request a sync.
+          variable_set('simplenews_roles_need_sync', TRUE);
+      	}
+        else {
          // if the user has no role that matches the current subscription, unsubscribe
-         simplenews_unsubscribe_user($account->mail, $tid, FALSE);
+         simplenews_unsubscribe_user($account->mail, $tid, FALSE, 'simplenews_roles');
+        }
       }
       break;
   }
@@ -152,27 +177,132 @@ function simplenews_roles_user($op, &$edit, &$account, $category = NULL) {
 /**
  * API function; clears subscription list for specified newsletter and replaces
  * it with users from the specified roles.
+ *
+ * This function should probably be only run on cron.
+ * It may well need better optimising.
+ *
+ * @param $tid
+ *  The newsletter id (ie term id) to update.
+ * @param $rids
+ *  An array of role ids.
  */
-function simplenews_roles_update_subscriptions($tid, $rids = array()) {
-  if (is_array($rids) && $rids) {
-    // TODO: Don't delete then insert, find the diff and add/remove!
+function simplenews_roles_update_subscriptions($tid, $rids) {
+  $rids_string = implode(', ', $rids);
 
-    // Remove all subscriptions from this newsletter.
-    $result = db_query('DELETE FROM {simplenews_snid_tid} WHERE tid = %d', $tid);
-
-    // Subscribe all active users from selected roles, if special authenticated user
-    // is in selected roles, just pull all active users.
-    if (in_array(DRUPAL_AUTHENTICATED_RID, $rids)) {
-      $result = db_query('SELECT u.mail FROM {users} u WHERE u.status = 1 AND u.uid != 0');
-    }
-    else {
-      $result = db_query('SELECT u.mail FROM {users} u INNER JOIN {users_roles} r ON u.uid = r.uid WHERE u.status = 1 AND ('. implode(' OR ', array_fill(0, count($rids), 'r.rid = %d')) .')', $rids);
-    }
-
-    while ($account = db_fetch_object($result)) {
-      simplenews_subscribe_user($account->mail, $tid, FALSE);
-    }
-
-    watchdog('newsletter', t('Newsletter subscription list was automatically regenerated.'));
+ /*
+  the rules are: 
+    - a: we can change status from 1 to 0 in all cases
+      (we may unsub anybody) 
+    - b: we can only change status from 0 to 1 if we are the source of the 0
+      (we can't resub users who unsubbed manually.)
+      (this accounts for role changes)
+    - c: we can add subs if status doesn't exist.
+   
+   the steps:
+    - 0
+    delete the snids for anon users.
+    
+    - 1
+    unsubscribe if user doesn't have role 
+    
+    - 2
+    subscribe all from role who are either unknown to SN, or who were
+    previously unsubscribed by ourselves (eg due to a user losing then
+    regaining a role).
+  */ 
+  
+  /** 
+   * step 0:
+   * remove anon users
+   */
+  $query_0 = "
+    DELETE {simplenews_snid_tid}
+    FROM 
+      {simplenews_snid_tid} snst
+    JOIN 
+      {simplenews_subscriptions} sns
+      ON snst.snid = sns.snid
+    WHERE
+      snst.tid = %d # TODO: tid
+    AND
+      sns.uid = 0";
+  
+  // Just delete these. They're not interesting.
+  // Why does this break simpletest?
+  //db_query($query_0, $tid);
+  
+  /**
+   * step 1: 
+   * remove users who are not in the role(s)
+  */
+  $query_1 = "
+    SELECT sns.mail 
+    FROM 
+      {simplenews_snid_tid} snst 
+    JOIN 
+      {simplenews_subscriptions} sns
+      ON snst.snid = sns.snid
+    JOIN 
+      {users} u
+      ON sns.uid = u.uid 
+    LEFT JOIN /* LEFT JOIN because we want the NULLs */
+      {users_roles} ur 
+      ON 
+        u.uid = ur.uid 
+      AND 
+        ur.rid IN (%s) /* $rids_string */
+    WHERE 
+      snst.tid = %d   /* $tid */
+    AND    
+      ur.uid IS NULL
+    ";
+      
+  $mails_1 = db_result(db_query($query_1, $rids_string, $tid));
+  foreach ((array)$mails_1 as $mail) {
+    // Call SN API to unsub users.
+    simplenews_unsubscribe_user($mail, $tid, FALSE, 'simplenews_roles');
   }
+  
+  /**
+   * step 2: 
+   * add users who are in the role(s), and not subscribed
+   * but only if the prior source of unsubscription is ourselves
+   * In other words, if the source of their unsub is 'website', say
+   * we don't touch it.
+   */
+  $query_2 = "
+    SELECT u.mail
+    FROM
+      {users} u
+    JOIN
+      {users_roles} ur 
+      ON 
+        u.uid = ur.uid 
+      AND 
+        ur.rid IN (%s) /* $rids_string */
+    LEFT JOIN /* LEFT JOIN because we want the NULLs */
+    (
+      {simplenews_snid_tid} snst 
+    JOIN 
+      {simplenews_subscriptions} sns
+      ON 
+        snst.snid = sns.snid
+      AND
+        snst.tid = %d   /* $tid */
+    )
+    ON
+      u.uid = sns.uid
+    WHERE
+      sns.snid IS NULL /* those that don't exist at all for this tid or for SN as a whole */
+      OR
+      snst.source = 'simplenews_roles' /* those we unsubbed ourselves previously */
+  ";
+
+  $mails_2 = db_result(db_query($query_2, $rids_string, $tid));
+  foreach ((array)$mails_2 as $mail) {
+    // Call SN API to sub users.
+    simplenews_subscribe_user($mail, $tid, FALSE, 'simplenews_roles');
+  }
+  
+  watchdog('newsletter', t('Newsletter subscription list was synchronized to roles.'));
 }

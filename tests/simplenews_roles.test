@@ -4,10 +4,13 @@
 /**
 * Unit tests for Simplenews Roles module.
 */
-class SimplenewsRolesTestCase extends SimplenewsTestCase {
+class SimplenewsRolesTestCase extends DrupalWebTestCase {
   protected $web_user;
-  protected $image;
-  protected $another_image;
+  
+  public function setUp() {
+    parent::setUp('taxonomy', 'simplenews');
+  }
+  
 
   /**
    * Drupal SimpleTest method: return metadata about the test.
@@ -19,6 +22,24 @@ class SimplenewsRolesTestCase extends SimplenewsTestCase {
       'group' => t('Simplenews'),
     );
   }
+  
+  /**
+   * Select randomly one of the available newsletters.
+   * Copied from simplenews.test.
+   *
+   * @return newsletter tid.
+   */
+  function getRandomNewsletter() {
+    if ($taxonomies = taxonomy_get_tree(variable_get('simplenews_vid', ''))) {
+      $tids = array();
+      foreach ($taxonomies as $newsletter) {
+        $tids[] = $newsletter->tid;
+      }
+    $key = array_rand($tids);
+    return $tids[$key];
+    }
+    return 0;
+  }  
 
   /**
    * Test role synchronization.
@@ -43,5 +64,16 @@ class SimplenewsRolesTestCase extends SimplenewsTestCase {
       simplenews_user_is_subscribed($user->mail, $tid, TRUE),
       t('User with role was automatically subscribed.')
     );
+    //simplenews_subscribe_user($user->mail, $tid, FALSE, 'test-hand-sub');    
+
+    // Now simulate user unsubscribing themselves.
+    simplenews_unsubscribe_user($user->mail, $tid, FALSE, 'website');
+    
+    // synchronize the role and the newsletter.
+    simplenews_roles_update_subscriptions($tid, $rids);
+    $this->assertFalse(
+      simplenews_user_is_subscribed($user->mail, $tid, TRUE),
+      t('Manually unsubscribed user was not re-subscribed.')
+    );    
   }
 }
