@@ -10,6 +10,17 @@
  * - user role change (but just that user)
  * - newsletter role change (whole newsletter)
  * - 
+ *
+ * Variables:
+ * - simplenews_roles_tids_rids
+ *   An array whose keys are tids of newsletters this module is concerned with.
+ *   If a newsletter tid does not have a key here, we ignore it completely.
+ *   The values of this array are arrays of role IDs (by value).
+ *   Example: newsletter 4 is synced to roles 8 and 9:
+ *     4 => array(8, 9)
+ * - simplenews_roles_need_sync
+ *   Flags whether synchronization of newsletter subscriptions is needed.
+ *   This avoids doing this every single cron run.
  */
  
  
