@@ -192,7 +192,7 @@ function simplenews_roles_filter_tids($tids, $account = NULL) {
   $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
   
   if ($account) {
-    $roles = $account->roles;
+    $roles = array_keys($account->roles);
   }
   else {
     global $user;
