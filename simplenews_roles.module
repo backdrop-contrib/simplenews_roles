@@ -244,21 +244,6 @@ function simplenews_roles_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
- * Implementation of hook_mail_alter().
- * It is pointless to have an unsubscribe link for role-based emails.
- */
-function simplenews_roles_mail_alter(&$message) {
-	$role_newsletters = variable_get('simplenews_roles_tids_rids', array());
-	
-	if ($message['id'] == 'simplenews_test' || $message['id'] == 'simplenews_node') {
-		$tid = $message['params']['context']['node']->simplenews['tid'];
-		if (!empty($role_newsletters[$tid])) {
-			$message['body']['footer'] = '';
-		}
-	}
-}
-
-/**
  * Implementation of hook_user().
  */
 function simplenews_roles_user($op, &$edit, &$account, $category = NULL) {
