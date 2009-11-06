@@ -377,8 +377,8 @@ function simplenews_roles_update_subscriptions($tid, $rids) {
       ur.uid IS NULL
     ";
       
-  $mails_1 = db_result(db_query($query_1, $rids_string, $tid));
-  foreach ((array)$mails_1 as $mail) {
+  $mails_1 = db_query($query_1, $rids_string, $tid);
+  while ($mail = db_result($mails_1)) {
     // Call SN API to unsub users.
     simplenews_unsubscribe_user($mail, $tid, FALSE, 'simplenews_roles');
   }
@@ -418,8 +418,8 @@ function simplenews_roles_update_subscriptions($tid, $rids) {
       snst.source = 'simplenews_roles' /* those we unsubbed ourselves previously */
   ";
 
-  $mails_2 = db_result(db_query($query_2, $rids_string, $tid));
-  foreach ((array)$mails_2 as $mail) {
+  $mails_2 = db_query($query_2, $rids_string, $tid);
+  while ($mail = db_result($mails_2)) {
     // Call SN API to sub users.
     simplenews_subscribe_user($mail, $tid, FALSE, 'simplenews_roles');
   }
