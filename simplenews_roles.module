@@ -50,6 +50,8 @@ function simplenews_roles_cron() {
     foreach(variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
       simplenews_roles_update_subscriptions($tid, $rids);
     }
+    // Reset sync request.
+    variable_set('simplenews_roles_need_sync', FALSE);
   }
 }
 
