@@ -226,7 +226,7 @@ function simplenews_roles_filter_tids($tids, $account = NULL) {
  * Implementation of hook_nodeapi().
  */
 function simplenews_roles_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if ($node->type == 'simplenews') {
+  if (in_array($node->type, variable_get('simplenews_content_types', array('simplenews')))) {
     switch ($op) {
       case 'insert':
       case 'update':
