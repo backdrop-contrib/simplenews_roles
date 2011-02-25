@@ -1,4 +1,3 @@
-; $Id$
 name = Simplenews roles
 description = "Automatically subscribe users in designated roles to a newsletter list."
 package = Mail

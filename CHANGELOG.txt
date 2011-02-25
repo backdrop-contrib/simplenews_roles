@@ -1,4 +1,3 @@
-// $Id$
 
 Simplenews Roles x.x-x.x, xxxx-xx-xx
 ------------------------------------
