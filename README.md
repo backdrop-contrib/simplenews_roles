@@ -17,7 +17,7 @@ The Simplenews Roles module for Backdrop CMS synchronizes user subscriptions to 
 
 ## Configuration
 
-1. Go to the **Simplenews Roles Settings** page under **Configuration** to set up your role-to-newsletter mappings.
+1. Go to Configuration > Newsletters > edit newsletter category > Role synchronization, and configure your role-to-newsletter mappings.
 2. Select the roles that should be automatically subscribed to each newsletter.
 3. Enable or disable the **Auto Remove** option for each newsletter.
 
