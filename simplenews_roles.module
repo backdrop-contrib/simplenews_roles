@@ -149,7 +149,7 @@ function simplenews_roles_update_subscriptions($tid, $rids = array()) {
     if (!in_array(BACKDROP_AUTHENTICATED_ROLE, $rids)) {
       $db_or = db_or();
       foreach ($rids as $rid) {
-        $db_or->condition('ur.rid', $rid);
+        $db_or->condition('ur.role', $rid);
       }
 
       // Unsubscribe query
