@@ -1,0 +1,7 @@
+{
+    "_config_name": "simplenews_roles.settings",
+    "tids_rids": [],
+    "auto_remove": [],
+    "unsubscribe_limit": "1000",
+    "subscribe_limit": "1000"
+}

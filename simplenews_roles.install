@@ -1,0 +1,31 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the simplenews_roles module.
+ *
+ */
+
+
+/**
+ * Migrate simplenews_roles variables to config.
+ */
+function simplenews_roles_update_1000() {
+  $config = config('simplenews_roles.settings');
+  $config->set('tids_rids', update_variable_get('simplenews_roles_tids_rids', array()));
+  $config->set('auto_remove', update_variable_get('simplenews_roles_auto_remove', array()));
+  $config->set('unsubscribe_limit', update_variable_get('simplenews_roles_unsubscribe_limit', '1000'));
+  $config->set('subscribe_limit', update_variable_get('simplenews_roles_subscribe_limit', '1000'));
+  $config->save();
+
+  update_variable_del('simplenews_roles_tids_rids');
+  update_variable_del('simplenews_roles_auto_remove');
+  update_variable_del('simplenews_roles_unsubscribe_limit');
+  update_variable_del('simplenews_roles_subscribe_limit');
+}
+
+/**
+ * Implements hook_install().
+ */
+function simplenews_roles_install() {
+  // Dynamically generated variable data was detected.
+}

@@ -8,13 +8,14 @@
  */
 
 /**
- * Implements hook_help().
+ * Implements hook_config_info().
  */
-function simplenews_roles_help($path, $arg) {
-  switch ($path) {
-    case 'admin/help#simplenews_roles':
-      return '<p>' . t('Simplenews roles keeps subscriptions to particular newsletters synchronized with one or more roles. Enable roles in the options for <a href="@newsletters">each newsletter</a>.', array('@newsletters' => url('admin/content/simplenews/types'))) . '</p>';
-  }
+function simplenews_roles_config_info() {
+  $prefixes['simplenews_roles.settings'] = array(
+    'label' => t('Simplenews roles settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
 }
 
 /**
@@ -23,8 +24,9 @@ function simplenews_roles_help($path, $arg) {
  * Add our settings to the newsletter add/edit settings page.
  */
 function simplenews_roles_form_simplenews_admin_category_form_alter(&$form, $form_state) {
-  $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
-  $auto_remove = variable_get('simplenews_roles_auto_remove', array());
+  $config = config('simplenews_roles.settings');
+  $role_newsletters = $config->get('tids_rids');
+  $auto_remove = $config->get('auto_remove');
 
   $form['simplenews_roles'] = array(
     '#type' => 'fieldset',
@@ -53,17 +55,18 @@ function simplenews_roles_form_simplenews_admin_category_form_alter(&$form, $for
  * Every submit leads to a resync.
  */
 function simplenews_roles_newsletter_submit($form, &$form_state) {
+  $config = config('simplenews_roles.settings');
   $tid = $form_state['values']['tid'];
   $roleids = array_values(array_filter($form_state['values']['roles']));
 
   // Save auto remove settings
-  $auto_remove = variable_get('simplenews_roles_auto_remove', array());
+  $auto_remove = $config->get('auto_remove');
   $auto_remove[$tid] = $form_state['values']['auto_remove'];
-  variable_set('simplenews_roles_auto_remove', $auto_remove);
+  config_set('simplenews_roles.settings', 'auto_remove', $auto_remove);
 
   // Update subscriptions
-  $role_newsletters = variable_get('simplenews_roles_tids_rids', array());
-  $resync = variable_get('simpelnews_roles_resync', array());
+  $role_newsletters = $config->get('tids_rids');
+  $resync = $config->get('resync');
   if (count($roleids) > 0) {
     if (!isset($role_newsletters[$tid]) || $role_newsletters[$tid] <> $roleids) {
       // Sync selection changed. Trigger resync once.
@@ -93,17 +96,17 @@ function simplenews_roles_newsletter_submit($form, &$form_state) {
     unset($resync[$tid]);
   }
 
-  variable_set('simplenews_roles_tids_rids', $role_newsletters);
-  variable_set('simpelnews_roles_resync', $resync);
+  config_set('simplenews_roles.settings', 'tids_rids', $role_newsletters);
+  config_set('simplenews_roles.settings', 'resync', $resync);
 }
 
 /**
  * Implements hook_user_insert().
  */
-function simplenews_roles_user_insert(&$edit, $account, $category) {
+function simplenews_roles_user_insert($account) {
   $roles = array_keys($account->roles);
 
-  foreach (variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
+  foreach (config_get('simplenews_roles.settings', 'tids_rids') as $tid => $rids) {
     if (count(array_intersect($rids, $roles)) > 0) {
       // If the user has role that matches the current subscription, subscribe.
       simplenews_subscribe_user($account->mail, $tid, FALSE, 'simplenews_roles');
@@ -117,10 +120,10 @@ function simplenews_roles_user_insert(&$edit, $account, $category) {
  * Check synchronized lists depending on users roles.
  * @todo If a site contains many newsletters this adds currently too much weight to a user_update.
  */
-function simplenews_roles_user_update(&$edit, $account, $category) {
+function simplenews_roles_user_update($account) {
   $roles = array_keys($account->roles);
 
-  foreach (variable_get('simplenews_roles_tids_rids', array()) as $tid => $rids) {
+  foreach (config_get('simplenews_roles.settings', 'tids_rids') as $tid => $rids) {
     if (count(array_intersect($rids, $roles)) > 0) {
       // If the user has one or more roles that matches the current subscription, subscribe.
       simplenews_subscribe_user($account->mail, $tid, FALSE, 'simplenews_roles');
@@ -138,21 +141,23 @@ function simplenews_roles_user_update(&$edit, $account, $category) {
  * A function that synchronizes users and newsletter categories according to user roles.
  */
 function simplenews_roles_update_subscriptions($tid, $rids = array()) {
+  $config = config('simplenews_roles.settings');
   $sync_done = TRUE;
 
   if (is_array($rids) && !empty($rids)) {
-    if (!in_array(DRUPAL_AUTHENTICATED_RID, $rids)) {
+
+    if (!in_array(BACKDROP_AUTHENTICATED_ROLE, $rids)) {
       $db_or = db_or();
       foreach ($rids as $rid) {
         $db_or->condition('ur.rid', $rid);
       }
 
       // Unsubscribe query
-      $auto_remove = variable_get('simplenews_roles_auto_remove', array());
+      $auto_remove = $config->get('auto_remove');
       if (!isset($auto_remove[$tid]) || $auto_remove[$tid]) {
 
         // Define how many items to unsubscribe per each cron.
-        $unsubscribe_limit = variable_get('simplenews_roles_unsubscribe_limit', 1000);
+        $unsubscribe_limit = $config->get('unsubscribe_limit');
 
         $subquery = db_select('users', 'u');
         $subquery->fields('u', array('uid'));
@@ -181,7 +186,7 @@ function simplenews_roles_update_subscriptions($tid, $rids = array()) {
     }
 
     // Define how many items to subscribe per each cron.
-    $subscribe_limit = variable_get('simplenews_roles_subscribe_limit', 1000);
+    $subscribe_limit = $config->get('subscribe_limit');
 
     // Build subscribe query
     $subquery = db_select('simplenews_subscriber', 'subscriber');
@@ -223,14 +228,23 @@ function simplenews_roles_update_subscriptions($tid, $rids = array()) {
  */
 function simplenews_roles_cron() {
   // Check if we need to resync anything.
-  $resync = variable_get('simpelnews_roles_resync', array());
+  $resync = config_get('simpelnews_roles.settings', 'resync');
+
   if (!empty($resync)) {
     $tid = key($resync);
 
     $sync_done = simplenews_roles_update_subscriptions($tid, $resync[$tid]);
     if ($sync_done) {
       unset($resync[$tid]);
-      variable_set('simpelnews_roles_resync', $resync);
+      config_set('simpelnews_roles.settings', 'resync', $resync);
     }
   }
+}
+
+/**
+ * Implements hook_autoload_info().
+ */
+function simplenews_roles_autoload_info() {
+  return array(
+  );
 }

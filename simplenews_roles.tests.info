@@ -1,0 +1,30 @@
+[SimplenewsRolesTestCase]
+name = SimplenewsRolesTestCase
+description = SimplenewsRolesTestCase
+group = simplenews_roles
+file = tests/simplenews_roles.test
+
+[SimplenewsRolesUserRegisterTestCase]
+name = User Register
+description = Check subscription after registration.
+group = Simplenews Roles
+file = tests/simplenews_roles.test
+
+[SimplenewsRolesUpdateProfileTestCase]
+name = Update User Profile
+description = Check subscription after editing profile (assign/unassign role).
+group = Simplenews Roles
+file = tests/simplenews_roles.test
+
+[SimplenewsRolesUserDeleteTestCase]
+name = User Delete
+description = Check that the subscription is deleted after the user is deleted.
+group = Simplenews Roles
+file = tests/simplenews_roles.test
+
+[SimplenewsRolesResyncTestCase]
+name = Resync
+description = Test to check the general behavior of simplenews_roles module and simplenews_roles_update_subscriptions() method.
+group = Simplenews Roles
+file = tests/simplenews_roles.test
+

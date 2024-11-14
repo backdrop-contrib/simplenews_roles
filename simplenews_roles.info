@@ -1,7 +1,9 @@
 name = Simplenews roles
 description = "Automatically subscribe users in designated roles to a newsletter list."
 package = Mail
-core = 7.x
+backdrop = 1.x
+type = module
 dependencies[] = simplenews
+maintainers[alanmels] = Alan Mels
+maintainers_wanted = TRUE
 
-files[] = tests/simplenews_roles.test
