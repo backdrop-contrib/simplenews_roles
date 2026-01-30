@@ -228,7 +228,7 @@ function simplenews_roles_update_subscriptions($tid, $rids = array()) {
  */
 function simplenews_roles_cron() {
   // Check if we need to resync anything.
-  $resync = config_get('simpelnews_roles.settings', 'resync');
+  $resync = config_get('simplenews_roles.settings', 'resync');
 
   if (!empty($resync)) {
     $tid = key($resync);
@@ -236,7 +236,7 @@ function simplenews_roles_cron() {
     $sync_done = simplenews_roles_update_subscriptions($tid, $resync[$tid]);
     if ($sync_done) {
       unset($resync[$tid]);
-      config_set('simpelnews_roles.settings', 'resync', $resync);
+      config_set('simplenews_roles.settings', 'resync', $resync);
     }
   }
 }
